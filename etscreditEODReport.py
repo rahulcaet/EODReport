@@ -9,62 +9,38 @@ from datetime import date, datetime
 import os
 import time
 
-def getAvgMinMaxPersisTime(dbClient, collection):
+def getAvgMinMaxPersisTime(collection):
     pipeline = [
+        {"$project": {
+            "epoch":       {"$toLong": "${DBInsertDt}".format(DBInsertDt=
+                                                             config.get('CHECK_FIELD', 'DBInsertDt'))},
+            "createepoch": {"$toLong": "${ObjectCreationDt}".format(ObjectCreationDt=
+                                                              config.get('CHECK_FIELD', 'ObjectCreationDt'))}
+        }},
+        {"$project": {
+            "difference": {"$subtract": [
+                "$epoch",
+                "$createepoch"
+            ]}
+        }},
         {"$group": {
             "_id": None,
-            "avg_time": {
-                "$avg": {
-                    "$subtract": [
-
-                                    {"$ifNull": ["${DBInsertDt}".format(DBInsertDt=
-                                        config.get('CHECK_FIELD', 'DBInsertDt')), 0]},
-
-                                    {"$ifNull": ["${ObjectCreationDt}".format(ObjectCreationDt=
-                                        config.get('CHECK_FIELD', 'ObjectCreationDt')), 0]}
-
-                                 ]
-                        }
-            },
-            "max_time": {
-                "$max": {
-                    "$subtract": [
-                                     {"$ifNull": ["${DBInsertDt}".format(DBInsertDt=
-                                        config.get('CHECK_FIELD', 'DBInsertDt')), 0]},
-
-                                     {"$ifNull": ["${ObjectCreationDt}".format(ObjectCreationDt=
-                                        config.get('CHECK_FIELD', 'ObjectCreationDt')), 0]}
-
-                                 ]
-                        }
-            },
-            "min_time": {
-                "$min": {
-                    "$subtract": [
-                                      {"$ifNull": ["${DBInsertDt}".format(DBInsertDt=
-                                        config.get('CHECK_FIELD', 'DBInsertDt')), 0]},
-
-                                      {"$ifNull": ["${ObjectCreationDt}".format(ObjectCreationDt=
-                                         config.get('CHECK_FIELD', 'ObjectCreationDt')), 0]}
-
-                                 ]
-                        }
-            }
-
-            }
-        }
+            "min": {"$min": "$difference"},
+            "max": {"$max": "$difference"},
+            "avg": {"$avg": "$difference"}
+        }}
     ]
 
     cursor = collection.aggregate(pipeline)
     result = list(cursor)[0]
 
-    return (result['avg_time'],
-            result['min_time'],
-            result['max_time']
+    return (result['avg'],
+            result['min'],
+            result['max']
             )
 
 
-def getNoOfRecordsUpdated(dbClient, collection):
+def getNoOfRecordsUpdated(collection):
     #since records are inserted as UTC(ISO) time in mongoDB, hence calculating current UTC time
     nowTime = time.gmtime()
     reportDt = datetime(nowTime.tm_year, nowTime.tm_mon, nowTime.tm_mday)
@@ -75,6 +51,7 @@ def getNoOfRecordsUpdated(dbClient, collection):
 
 
 def writeRpt(collectionDetails):
+    print('collectionDetails is: ', collectionDetails)
     df = pd.DataFrame(collectionDetails, columns=['CollectionName', 'Date', 'TotalRecords',
                                                   'NoOfRecordsUpdated', 'MinPersistTime(in ms)',
                                                   'MaxPersistTime(in ms) ', 'AvgPersistTime(in ms)'])
@@ -114,14 +91,12 @@ def queryDB(dbClient):
         for collectionName in db.list_collection_names():
             totalRecords = db[collectionName].count()
 
-            runDate, NoOfRecordsUpdated = getNoOfRecordsUpdated(dbClient,
-                                                                db[collectionName])
+            runDate, NoOfRecordsUpdated = getNoOfRecordsUpdated(db[collectionName])
 
             print('collectionName', collectionName, 'totalRecords', totalRecords,
                   'runDate', runDate, 'NoOfRecordsUpdated', NoOfRecordsUpdated )
 
-            AvgPersistTime, MinPersistTime, MaxPersistTime = getAvgMinMaxPersisTime(dbClient,
-                                                                                    db[collectionName])
+            AvgPersistTime, MinPersistTime, MaxPersistTime = getAvgMinMaxPersisTime(db[collectionName])
 
             collectionDetails.append([collectionName, runDate, totalRecords, NoOfRecordsUpdated,
                                  MinPersistTime, MaxPersistTime, AvgPersistTime])
