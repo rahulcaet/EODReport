@@ -93,12 +93,7 @@ def connectDB():
     print('connecting to database...')
 
     try:
-
-        dbConnectionStr = '{prefix}://{username}:{password}@{host}:{port}'.format(prefix=config.get('DB', 'prefix'),
-                                                                              username=config.get('DB', 'username'),
-                                                                              password=config.get('DB', 'password'),
-                                                                              host=config.get('DB', 'host'),
-                                                                              port=config.get('DB', 'port'))
+        dbConnectionStr = config.get('DB', 'connectionURI')
 
         print(dbConnectionStr)
 
