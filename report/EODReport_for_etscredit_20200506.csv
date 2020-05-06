@@ -1,0 +1,3 @@
+CollectionName,Date,TotalRecords,NoOfRecordsUpdated,MinPersistTime(in ms),MaxPersistTime(in ms) ,AvgPersistTime(in ms)
+CouponSchedule,20200506,4,1,15,60000,36503.75
+ComparableOffer,20200506,1,0,-77000,-77000,-77000.0
