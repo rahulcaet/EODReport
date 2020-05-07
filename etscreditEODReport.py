@@ -87,11 +87,17 @@ def connectDB():
 def queryDB(dbClient):
     with dbClient:
         db = dbClient[config.get('DB', 'database')]
-        collectionDetails = []
+        collectionRptDetails = []
+
+        collectionArgList = [collection
+                             for collection in config.get('DB', 'collection').split(',')
+                             if collection != 'all']
+
+        print('collectionArgList', collectionArgList, bool(collectionArgList))
 
         for collectionName in db.list_collection_names():
             #if list of collections are passsed from command line, then only those will be considered for reporting
-            if args.collection and collectionName not in args.collection:
+            if collectionArgList and collectionName not in collectionArgList:
                 continue
             totalRecords = db[collectionName].count()
 
@@ -103,16 +109,15 @@ def queryDB(dbClient):
             AvgPersistTime, MinPersistTime, MaxPersistTime = getAvgMinMaxPersisTime(collectionName,
                                                                                     db[collectionName])
 
-            collectionDetails.append([collectionName, runDate, totalRecords, NoOfRecordsUpdated,
+            collectionRptDetails.append([collectionName, runDate, totalRecords, NoOfRecordsUpdated,
                                  MinPersistTime, MaxPersistTime, AvgPersistTime])
 
-    return collectionDetails
+    return collectionRptDetails
 
 
 if __name__ == '__main__' :
     parser = argparse.ArgumentParser(description='Query DB & prepare report')
     parser.add_argument('-c', '--config', required=True, help='path of config file')
-    parser.add_argument('--collection', nargs='*', help='list of components sepearated by blank space', required=False)
 
     args = parser.parse_args()
 
