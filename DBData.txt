@@ -1,0 +1,10 @@
+> db.reviews.find()
+{ "_id" : "125", "reviews" : { "name" : "K3G", "createDate" : "1588723830968" },
+ "lastUpdateDate" : ISODate("2020-05-06T00:10:30.970Z") }
+ 
+> db.movies.find()
+{ "_id" : "123", "movies" : { "name" : "BB1", "createDate" : "1588723830980" },
+"lastUpdateDate" : ISODate("2020-05-06T00:10:30.990Z") }
+{ "_id" : "124", "movies" : { "name" : "DDLJ", "createDate" : "1588723830975" },
+ "lastUpdateDate" : ISODate("2020-05-06T00:10:30.980Z") }
+>
