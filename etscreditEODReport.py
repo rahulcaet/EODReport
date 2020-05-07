@@ -9,12 +9,13 @@ from datetime import date, datetime
 import os
 import time
 
-def getAvgMinMaxPersisTime(collection):
+def getAvgMinMaxPersisTime(collectionName, collection):
     pipeline = [
         {"$project": {
             "epoch":       {"$toLong": "${DBInsertDt}".format(DBInsertDt=
                                                              config.get('CHECK_FIELD', 'DBInsertDt'))},
-            "createepoch": {"$toLong": "${ObjectCreationDt}".format(ObjectCreationDt=
+            "createepoch": {"$toLong": "${collection}{ObjectCreationDt}".format(collection=collectionName +".",
+                                                                                ObjectCreationDt=
                                                               config.get('CHECK_FIELD', 'ObjectCreationDt'))}
         }},
         {"$project": {
@@ -89,6 +90,9 @@ def queryDB(dbClient):
         collectionDetails = []
 
         for collectionName in db.list_collection_names():
+            #if list of collections are passsed from command line, then only those will be considered for reporting
+            if args.collection and collectionName not in args.collection:
+                continue
             totalRecords = db[collectionName].count()
 
             runDate, NoOfRecordsUpdated = getNoOfRecordsUpdated(db[collectionName])
@@ -96,7 +100,8 @@ def queryDB(dbClient):
             print('collectionName', collectionName, 'totalRecords', totalRecords,
                   'runDate', runDate, 'NoOfRecordsUpdated', NoOfRecordsUpdated )
 
-            AvgPersistTime, MinPersistTime, MaxPersistTime = getAvgMinMaxPersisTime(db[collectionName])
+            AvgPersistTime, MinPersistTime, MaxPersistTime = getAvgMinMaxPersisTime(collectionName,
+                                                                                    db[collectionName])
 
             collectionDetails.append([collectionName, runDate, totalRecords, NoOfRecordsUpdated,
                                  MinPersistTime, MaxPersistTime, AvgPersistTime])
@@ -107,6 +112,7 @@ def queryDB(dbClient):
 if __name__ == '__main__' :
     parser = argparse.ArgumentParser(description='Query DB & prepare report')
     parser.add_argument('-c', '--config', required=True, help='path of config file')
+    parser.add_argument('--collection', nargs='*', help='list of components sepearated by blank space', required=False)
 
     args = parser.parse_args()
 
@@ -122,7 +128,8 @@ if __name__ == '__main__' :
     collectionDetails = queryDB(dbClient)
 
     #writing the report
-    writeRpt(collectionDetails)
+    if collectionDetails:
+        writeRpt(collectionDetails)
 
 
 
