@@ -7,11 +7,12 @@ from pymongo import MongoClient
 import pandas as pd
 from datetime import date, datetime
 import os
-
-from mongoDBConnect import connectDB
 from bson.json_util import dumps, loads
 from bson import decode_all
+import bson
+import logging
 
+from mongoDBConnect import connectDB
 
 def getSrcCollectionDumpFile(srcdb, collectionName):
     collectionObj = srcdb[collectionName]
@@ -21,7 +22,7 @@ def getSrcCollectionDumpFile(srcdb, collectionName):
         try:
             os.unlink(BsonFileName)
         except Exception as e:
-            print('Error: removing file ' + BsonFileName + " :" + e.__str__() )
+            logging.error('Error: removing file ' + BsonFileName + " :" + e.__str__() )
             return 0
 
     cursor = collectionObj.find({})
@@ -47,21 +48,25 @@ def getSrcCollectionDumpFile(srcdb, collectionName):
 def importBsonTrgDB(trgdb, collectionName, BsonFileName):
     collectionObj = trgdb[collectionName]
 
-    with open(BsonFileName, 'rb') as fp:
-        file_data = fp.read()
-        file_data = loads(file_data)
-
+    try:
+        with open(BsonFileName, 'rb') as fp:
+            file_data = fp.read()
+            file_data = loads(file_data)
+    except Exception as e:
+        logging.error('Problem while reading Bson file %s : %s'.format(BsonFileName, e.__str__()))
+        return 0
     try:
         for document in file_data:
             collectionObj.insert_one(document)
-        print('Successfully Imported collection %s'%collectionName)
+        logging.info('Success: Import Complete for collection %s : count is: %s'
+                     %(collectionName, trgdb[collectionName].count()))
         return 1
     except Exception as e:
-        print('Error: while loading data in target DB for collection ' + collectionName + " :" + e.__str__())
+        logging.error('Error: while loading data in target DB for collection ' + collectionName + " :" + e.__str__())
         return 0
 
 def copyCollectionSrcToTrgDB(srcDBClient, trgDBClient):
-    print('Inside copyCollectionSrcToTrgDB')
+    logging.info('Inside copyCollectionSrcToTrgDB')
 
     with srcDBClient:
         srcdb = srcDBClient[config.get('DB', 'database')]
@@ -80,22 +85,28 @@ def copyCollectionSrcToTrgDB(srcDBClient, trgDBClient):
                 continue
 
             #check if collection exist or empty in target db
-            if ((collectionName not in listCollectionNamesTrgDB) or
-                (trgdb[collectionName].count() == 0)):
-                print('Dumping collection %s to file'%collectionName)
+            if ((srcdb[collectionName].count() > 0) and
+                 ((collectionName not in listCollectionNamesTrgDB) or
+                 (trgdb[collectionName].count() == 0))):
+                logging.info('Dumping collection %s to file'%collectionName)
                 BsonFileName = getSrcCollectionDumpFile(srcdb, collectionName)
 
                 if BsonFileName:
-                    print('Dumping complete for collection %s to file: %s' % (collectionName, BsonFileName))
-                    print('Importing in target DB')
+                    logging.info('Dumping complete for collection %s to file: %s' % (collectionName, BsonFileName))
+                    logging.info('Importing in target DB')
+                    #importBsonTrgDB(trgdb, collectionName, BsonFileName)
                     ret = importBsonTrgDB(trgdb, collectionName, BsonFileName)
-                    print('return value: ', ret)
+                    if ret == 1:
+                        logging.info('''Success: data copied for collection {} =>
+                                 Source DB Collection Count : {}
+                                 Target DB Collection Count : {}'''.format(collectionName,
+                                                                           srcdb[collectionName].count(),
+                                                                           trgdb[collectionName].count()))
+                    else:
+                        logging.error('''Error: data copy unsuccessful for collection {}'''.format(collectionName))
                     trgDBClient.close()
             else:
-                print('collection: ' + collectionName + ' already exists in target DB')
-
-
-
+                logging.warning('collection: ' + collectionName + ' already exists in target DB')
 
 
 if __name__ == '__main__':
@@ -109,22 +120,41 @@ if __name__ == '__main__':
     #reading config file
     config.read(args.config)
 
+    #setting the logger
+    logFileName = os.path.join(config.get('PATH', 'logdir'), __file__.replace('.py' , '.log') )
+    logging.basicConfig(filename=logFileName,
+                        format='%(asctime)s %(message)s',
+                        filemode='w',
+                        level=logging.INFO)
+
+
     #connecting to source DB by getting query String from config file
-    print('source database connecting...')
-    srcDBClient = connectDB(config.get('DB', 'srcConnectionURI'))
+    logging.info('source database connecting...')
+    srcDBClient = connectDB(config.get('DB', 'srcConnectionURI'),
+                            config.get('DB', 'user'),
+                            config.get('DB', 'password'))
 
     if not srcDBClient:
-        print("Error: Connecting to source DB with connection string: %s"%(config.get('DB', 'srcConnectionURI')))
+        logging.error("Error: Connecting to source DB with connection string: %s"
+                     % (config.get('DB', 'srcConnectionURI')))
         exit(1)
 
-    print('source database connected.')
+    logging.info('source database connected.')
 
-    print('target database connecting...')
-    trgDBClient = connectDB(config.get('DB', 'trgConnectionURI'))
+    logging.info('target database connecting...')
+    trgDBClient = connectDB(config.get('DB', 'trgConnectionURI'),
+                            config.get('DB', 'user'),
+                            config.get('DB', 'password'))
 
     if not trgDBClient:
-        print("Error: Connecting to target DB with connection string: %s" % (config.get('DB', 'trgConnectionURI')))
+        logging.info("Error: Connecting to target DB with connection string: %s"
+                    % (config.get('DB', 'trgConnectionURI')))
         exit(1)
 
-    print('target database  connected.')
+    logging.info('target database  connected.')
+
     copyCollectionSrcToTrgDB(srcDBClient, trgDBClient)
+
+
+
+

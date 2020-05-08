@@ -1,17 +1,20 @@
 from pymongo import MongoClient, errors
+import base64
+import logging
 
 
-def connectDB(dbConnectionStr):
-    print('connecting to database...')
+
+def connectDB(dbConnectionStr, user, password):
     client = None
 
     try:
-        print(dbConnectionStr)
-
+        password = base64.b64decode(password).decode("utf-8")
+        dbConnectionStr = dbConnectionStr.replace('user', user).replace('password', password)
         client = MongoClient(dbConnectionStr)
 
-        print('connected to database.')
     except errors.ServerSelectionTimeoutError as e:
-        print('Error: while connecting to database : ', e.__str__())
+        logging.error('Error: while connecting to database : ', e.__str__())
+    except Exception as e:
+        logging.error('Error: while connecting to database : ', e.__str__())
 
     return client
