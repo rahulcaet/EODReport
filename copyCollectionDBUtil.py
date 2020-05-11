@@ -112,16 +112,23 @@ def copyCollectionSrcToTrgDB(srcDBClient, trgDBClient):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Query DB & prepare report')
     parser.add_argument('-c', '--config', required=True, help='path of config file')
+    parser.add_argument('-d', '--dbconfig', required=True, help='path of DB config file which contains credentials')
 
     args = parser.parse_args()
 
     config = configparser.ConfigParser()
 
+    #dbconfig parser instance
+    dbConfig = configparser.ConfigParser()
+
     #reading config file
     config.read(args.config)
 
+    #reading db config file
+    dbConfig.read(args.dbconfig)
+
     #setting the logger
-    logFileName = os.path.join(config.get('PATH', 'logdir'), __file__.replace('.py' , '.log') )
+    logFileName = os.path.join(config.get('PATH', 'logdir'), __file__.replace('.py', '.log'))
     logging.basicConfig(filename=logFileName,
                         format='%(asctime)s %(message)s',
                         filemode='w',
@@ -130,31 +137,28 @@ if __name__ == '__main__':
 
     #connecting to source DB by getting query String from config file
     logging.info('source database connecting...')
-    srcDBClient = connectDB(config.get('DB', 'srcConnectionURI'),
-                            config.get('DB', 'user'),
-                            config.get('DB', 'password'))
+    srcDBClient = connectDB(dbConfig.get('DB', 'srcConnectionURI'),
+                            dbConfig.get('DB', 'srcUser'),
+                            dbConfig.get('DB', 'srcPassword'))
 
     if not srcDBClient:
         logging.error("Error: Connecting to source DB with connection string: %s"
-                     % (config.get('DB', 'srcConnectionURI')))
+                      % (dbConfig.get('DB', 'srcConnectionURI')))
         exit(1)
 
     logging.info('source database connected.')
 
     logging.info('target database connecting...')
-    trgDBClient = connectDB(config.get('DB', 'trgConnectionURI'),
-                            config.get('DB', 'user'),
-                            config.get('DB', 'password'))
+    trgDBClient = connectDB(dbConfig.get('DB', 'trgConnectionURI'),
+                            dbConfig.get('DB', 'trgUser'),
+                            dbConfig.get('DB', 'trgPassword'))
 
     if not trgDBClient:
         logging.info("Error: Connecting to target DB with connection string: %s"
-                    % (config.get('DB', 'trgConnectionURI')))
+                     % (dbConfig.get('DB', 'trgConnectionURI')))
         exit(1)
 
     logging.info('target database  connected.')
 
     copyCollectionSrcToTrgDB(srcDBClient, trgDBClient)
-
-
-
 

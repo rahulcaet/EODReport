@@ -3,7 +3,6 @@ import base64
 import logging
 
 
-
 def connectDB(dbConnectionStr, user, password):
     client = None
 
