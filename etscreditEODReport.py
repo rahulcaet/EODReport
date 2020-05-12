@@ -8,8 +8,12 @@ import pandas as pd
 from datetime import date, datetime
 import os
 import time
+import logging
+
+from mongoDBConnect import connectDB
 
 def getAvgMinMaxPersisTime(collectionName, collection):
+    logging.info('Inside getAvgMinMaxPersisTime')
     pipeline = [
         {"$project": {
             "epoch":       {"$toLong": "${DBInsertDt}".format(DBInsertDt=
@@ -52,7 +56,7 @@ def getNoOfRecordsUpdated(collection):
 
 
 def writeRpt(collectionDetails):
-    print('collectionDetails is: ', collectionDetails)
+    logging.info('Inside writeRpt')
     df = pd.DataFrame(collectionDetails, columns=['CollectionName', 'Date', 'TotalRecords',
                                                   'NoOfRecordsUpdated', 'MinPersistTime(in ms)',
                                                   'MaxPersistTime(in ms) ', 'AvgPersistTime(in ms)'])
@@ -64,27 +68,11 @@ def writeRpt(collectionDetails):
 
     df.to_csv(csvFile, index=False, encoding='utf-8')
 
-    print('Report path : %s'%csvFile)
-
-
-def connectDB():
-    print('connecting to database...')
-
-    try:
-        dbConnectionStr = config.get('DB', 'connectionURI')
-
-        print(dbConnectionStr)
-
-        client = MongoClient(dbConnectionStr)
-
-        print('connected to database.')
-        return client
-    except errors.ServerSelectionTimeoutError as e:
-        print('Error: while connecting to database : ', e.__str__())
-        exit(1)
+    logging.info('Report path : %s'%csvFile)
 
 
 def queryDB(dbClient):
+    logging.info('Inside queryDB')
     with dbClient:
         db = dbClient[config.get('DB', 'database')]
         collectionRptDetails = []
@@ -93,7 +81,7 @@ def queryDB(dbClient):
                              for collection in config.get('DB', 'collection').split(',')
                              if collection != 'all']
 
-        print('collectionArgList', collectionArgList, bool(collectionArgList))
+        logging.info('collectionArgList %s'%collectionArgList)
 
         for collectionName in db.list_collection_names():
             #if list of collections are passsed from command line, then only those will be considered for reporting
@@ -103,14 +91,20 @@ def queryDB(dbClient):
 
             runDate, NoOfRecordsUpdated = getNoOfRecordsUpdated(db[collectionName])
 
-            print('collectionName', collectionName, 'totalRecords', totalRecords,
-                  'runDate', runDate, 'NoOfRecordsUpdated', NoOfRecordsUpdated )
+            logging.info('collectionName {}, totalRecords {}, runDate {}, NoOfRecordsUpdated{}'.format(collectionName,
+                                                                                                totalRecords,
+                                                                                                runDate,
+                                                                                                NoOfRecordsUpdated ))
 
             AvgPersistTime, MinPersistTime, MaxPersistTime = getAvgMinMaxPersisTime(collectionName,
                                                                                     db[collectionName])
 
+            logging.info('AvgPersistTime {}, MinPersistTime {}, MaxPersistTime {}'.format(AvgPersistTime,
+                                                                                          MinPersistTime,
+                                                                                          MaxPersistTime) )
+
             collectionRptDetails.append([collectionName, runDate, totalRecords, NoOfRecordsUpdated,
-                                 MinPersistTime, MaxPersistTime, AvgPersistTime])
+                                         MinPersistTime, MaxPersistTime, AvgPersistTime])
 
     return collectionRptDetails
 
@@ -118,23 +112,48 @@ def queryDB(dbClient):
 if __name__ == '__main__' :
     parser = argparse.ArgumentParser(description='Query DB & prepare report')
     parser.add_argument('-c', '--config', required=True, help='path of config file')
+    parser.add_argument('-d', '--dbconfig', required=True, help='path of DB config file which contains credentials')
 
     args = parser.parse_args()
 
     config = configparser.ConfigParser()
 
+    # dbconfig parser instance
+    dbConfig = configparser.ConfigParser()
+
     #reading config file
     config.read(args.config)
 
-    #connecting to DB by getting query String from config file
-    dbClient = connectDB()
+    # reading db config file
+    dbConfig.read(args.dbconfig)
 
-    #queryinh into DB
+    # setting the logger
+    logFileName = os.path.join(config.get('PATH', 'logdir'), __file__.replace('.py', '.log'))
+    logging.basicConfig(filename=logFileName,
+                        format='%(asctime)s %(message)s',
+                        filemode='w',
+                        level=logging.INFO)
+
+    #connecting to DB by getting query String from config file
+    logging.info('connecting database...')
+    dbClient = connectDB(dbConfig.get('DB', 'srcConnectionURI'),
+                         dbConfig.get('DB', 'srcUser'),
+                         dbConfig.get('DB', 'srcPassword'))
+
+    if not dbClient:
+        logging.error("Error: Connecting to DB with connection string: %s"
+                      % (dbConfig.get('DB', 'srcConnectionURI')))
+        exit(1)
+
+    logging.info('database connected.')
+
+    #querying into DB
     collectionDetails = queryDB(dbClient)
 
     #writing the report
     if collectionDetails:
         writeRpt(collectionDetails)
+
 
 
 
