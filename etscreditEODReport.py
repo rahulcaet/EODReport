@@ -57,31 +57,69 @@ def getNoOfRecordsUpdated(collection):
 
 def writeRpt(collectionDetails):
     logging.info('Inside writeRpt')
-    df = pd.DataFrame(collectionDetails, columns=['CollectionName', 'Date', 'TotalRecords',
-                                                  'NoOfRecordsUpdated', 'MinPersistTime(in ms)',
-                                                  'MaxPersistTime(in ms) ', 'AvgPersistTime(in ms)'])
+    df = pd.DataFrame(collectionDetails, columns=['DatabaseName', 'CollectionName', 'Date',
+                                                  'TotalRecords', 'NoOfRecordsUpdated',
+                                                  'MinPersistTime(in ms)', 'MaxPersistTime(in ms)',
+                                                  'AvgPersistTime(in ms)', 'CollectionSize(in MB)'])
+
+    columns = eval(config.get('RPT_COLUMNS', 'columns'))
+
+    if ('all' not in columns):
+        #subset of columns
+        df = df[columns]
 
     runDate = df.loc[0, 'Date']
-    csvFile = os.path.join( config.get('PATH', 'outdir'),
-                            'EODReport_for_{db}_{date}.csv'.format(db=config.get('DB', 'database'),
-                                                                   date=runDate))
+    csvFile = os.path.join(config.get('PATH', 'outdir'),
+                           'EODReport_for_{date}.csv'.format(date=runDate))
 
     df.to_csv(csvFile, index=False, encoding='utf-8')
 
     logging.info('Report path : %s'%csvFile)
 
 
+def getCollectionSize(db, collectionName):
+    collectionStat = db.command("collstats", collectionName)
+    collectionSize = str((collectionStat['storageSize']) / (1024*1024)) + 'MB'
+
+    #print('Size of collection is: {}'.format(collectionSize))
+    return collectionSize
+
+
+def getDBSize(db):
+    dbStat = db.command("dbstats")
+    dbSize = str((dbStat['storageSize']) / (1024*1024)) + 'MB'
+
+    #print('Size of db is: {}'.format(dbSize))
+
+    return dbSize
+
 def queryDB(dbClient):
     logging.info('Inside queryDB')
-    with dbClient:
-        db = dbClient[config.get('DB', 'database')]
-        collectionRptDetails = []
+
+    collectionRptDetails = []
+
+    #get all DB sections names
+    dbArgDict = {config.get(section, 'database'): section
+                 for section in config.sections() if section.startswith('DB')}
+
+    print('dbArgDict:', dbArgDict)
+    #for dbSection in dbSections:
+    for entry in dbClient.list_databases():
+        databaseName = entry.get('name')
+        #print('databaseName: ', databaseName)
+        dbSection = dbArgDict.get(databaseName) if databaseName in dbArgDict else dbArgDict.get('all')
+
+        #print('databaseName= ', databaseName, 'dbSection= ',  dbSection)
+        if not dbSection:
+            continue
+
+        db = dbClient[databaseName]
 
         collectionArgList = [collection
-                             for collection in config.get('DB', 'collection').split(',')
+                             for collection in config.get(dbSection, 'collection').split(',')
                              if collection != 'all']
 
-        logging.info('collectionArgList %s'%collectionArgList)
+        logging.info('in Database %s collectionArgList %s' % (databaseName, collectionArgList))
 
         for collectionName in db.list_collection_names():
             #if list of collections are passsed from command line, then only those will be considered for reporting
@@ -101,10 +139,15 @@ def queryDB(dbClient):
 
             logging.info('AvgPersistTime {}, MinPersistTime {}, MaxPersistTime {}'.format(AvgPersistTime,
                                                                                           MinPersistTime,
-                                                                                          MaxPersistTime) )
+                                                                                          MaxPersistTime))
 
-            collectionRptDetails.append([collectionName, runDate, totalRecords, NoOfRecordsUpdated,
-                                         MinPersistTime, MaxPersistTime, AvgPersistTime])
+            collectionSize = getCollectionSize(db, collectionName)
+
+            logging.info('Database {} Collection {} size : {}'.format(databaseName, collectionName, collectionSize))
+
+            collectionRptDetails.append([databaseName, collectionName, runDate, totalRecords,
+                                         NoOfRecordsUpdated, MinPersistTime, MaxPersistTime,
+                                         AvgPersistTime, collectionSize])
 
     return collectionRptDetails
 
