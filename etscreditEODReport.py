@@ -102,7 +102,7 @@ def queryDB(dbClient):
     dbArgDict = {config.get(section, 'database'): section
                  for section in config.sections() if section.startswith('DB')}
 
-    print('dbArgDict:', dbArgDict)
+    #print('dbArgDict:', dbArgDict)
     #for dbSection in dbSections:
     for entry in dbClient.list_databases():
         databaseName = entry.get('name')
