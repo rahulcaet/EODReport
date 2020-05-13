@@ -2,14 +2,16 @@ from pymongo import MongoClient, errors
 import base64
 import logging
 import binascii
+import urllib
 
 def connectDB(dbConnectionStr, user, password):
     client = None
 
     try:
         password = base64.b64decode(password).decode("utf-8")
-        dbConnectionStr = dbConnectionStr.replace('user', user).replace('password', password)
-
+        dbConnectionStr = dbConnectionStr.replace('user',
+                                                  user).replace('password',
+                                                                 urllib.parse.quote(password))
     except binascii.Error as e:
         logging.error('Error while decoding password : ' + e.__str__())
         return
@@ -30,3 +32,4 @@ def connectDB(dbConnectionStr, user, password):
         logging.error('Error: while connecting to database : %s', e.__str__())
 
     return client
+
