@@ -79,7 +79,7 @@ def writeRpt(collectionDetails):
 
 def getCollectionSize(db, collectionName):
     collectionStat = db.command("collstats", collectionName)
-    collectionSize = str((collectionStat['storageSize']) / (1024*1024)) + 'MB'
+    collectionSize = '{0:.2f}{1}'.format((collectionStat['storageSize']) / (1024*1024), 'MB')
 
     #print('Size of collection is: {}'.format(collectionSize))
     return collectionSize
@@ -87,7 +87,7 @@ def getCollectionSize(db, collectionName):
 
 def getDBSize(db):
     dbStat = db.command("dbstats")
-    dbSize = str((dbStat['storageSize']) / (1024*1024)) + 'MB'
+    dbSize = '{0:.2f}{1}'.format((dbStat['storageSize']) / (1024*1024), 'MB')
 
     #print('Size of db is: {}'.format(dbSize))
 
