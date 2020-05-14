@@ -1,3 +1,15 @@
+1.run cmd as admin
+
+2. execute below:
+C:\Windows\system32>mongod --port 27017 --dbpath "C:\Program Files\MongoDB\Serve
+r\4.2\data" --logpath="C:\Program Files\MongoDB\Server\4.2\log\\mongod.log" --in
+stall --serviceName "mongodb"
+
+3.net start mongodb
+
+4. to start mongo shell type -mongod  mongo
+
+
 
 var mongodate = new Date("2020-05-06T01:12:00")
 var createTime = new Date("2020-05-06T01:11:00")
@@ -33,3 +45,66 @@ db.CouponSchedule.insert({"Security" : "CX12350", "MongoDate" : mongodate,"creat
 var mongodate = new Date("2020-05-06T01:12:00")
 var createTime = new Date("2020-05-06T01:13:17") 
 db.ComparableOffer.insert({"Security" : "CX12349", "MongoDate" : mongodate,"createTime" : createTime })
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%
+
+#10 millisec diff
+
+
+
+db.test2.insert({"mongodate":ISODate("2020-05-06T00:10:30.990"), "createTime": "1588723830980"});
+#5 millisec diff
+
+
+db.test2.insert({"mongodate":ISODate("2020-05-06T00:10:30.980"), "createTime": "1588723830975"});
+
+#3 millisec diff
+
+db.test2.insert({"mongodate":ISODate("2020-05-06T00:10:30.970"), "createTime": "1588723830968"});
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+test
+
+db.movies.insert({"_id": "123", "movies": {"name":"BB1", "createDate":"1588723830980"}, "lastUpdateDate":ISODate("2020-05-06T00:10:30.990")})
+
+db.movies.insert({"_id": "124", "movies": {"name":"DDLJ", "createDate":"1588723830975"}, "lastUpdateDate": ISODate("2020-05-06T00:10:30.980")})
+
+
+db.reviews.insert({"_id": "125", "reviews": {"name":"K3G", "createDate": "1588723830968"}, "lastUpdateDate": ISODate("2020-05-06T00:10:30.970")})
+
+db.movies.insert({"_id": "126", "movies": {"name":"KNPH", "createDate":"1588809921000"}, "lastUpdateDate":ISODate("2020-05-07T00:10:30.990")})
+
+
+
+
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^6
+
+test2
+
+db.sports.insert({"_id": "123", "sports": {"name":"Cricket", "createDate":"1588723830980"}, "lastUpdateDate":ISODate("2020-05-06T00:10:30.990")})
+
+db.sports.insert({"_id": "124", "sports": {"name":"Hockey", "createDate":"1588723830975"}, "lastUpdateDate": ISODate("2020-05-06T00:10:30.980")})
+
+
+db.comments.insert({"_id": "125", "comments": {"name":"Football", "createDate": "1588723830968"}, "lastUpdateDate": ISODate("2020-05-06T00:10:30.970")})
+
+db.comments.insert({"_id": "126", "comments": {"name":"Basketball", "createDate":"1588809921000"}, "lastUpdateDate":ISODate("2020-05-07T00:10:30.990")})
+
+
+$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+
+test3
+
+db.lyrics.insert({"_id": "123", "lyrics": {"name":"BB1", "createDate":"1588723830980"}, "lastUpdateDate":ISODate("2020-05-06T00:10:30.990")})
+
+db.lyrics.insert({"_id": "124", "lyrics": {"name":"DDLJ", "createDate":"1588723830975"}, "lastUpdateDate": ISODate("2020-05-06T00:10:30.980")})
+
+
+db.comments.insert({"_id": "125", "comments": {"name":"K3G", "createDate": "1588723830968"}, "lastUpdateDate": ISODate("2020-05-06T00:10:30.970")})
+
+db.comments.insert({"_id": "126", "comments": {"name":"KNPH", "createDate":"1588809921000"}, "lastUpdateDate":ISODate("2020-05-07T00:10:30.990")})
+
